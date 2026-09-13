@@ -28,7 +28,7 @@
 
 | 항목 | 선택 | 비고 |
 |---|---|---|
-| Go | 설치된 최신 안정版 (Fiber v3는 Go 1.25+) | `go version` 확인 |
+| Go | 현재 `go.mod`의 `go` 지시문 이상 | `go version` 확인. 로컬·CI·Docker 버전 기준은 `go.mod` |
 | HTTP | `github.com/gofiber/fiber/v3` | 최신 안정 버전 |
 | ORM | `gorm.io/gorm` | v2 계열 최신 |
 | DB 드라이버 | `gorm.io/driver/postgres`, `gorm.io/driver/mysql`, `github.com/glebarez/sqlite`(순수 Go) | env로 선택 |

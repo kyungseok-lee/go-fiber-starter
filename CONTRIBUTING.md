@@ -3,17 +3,40 @@
 이 저장소는 AI 에이전트와 사람이 공동 작업하는 것을 전제로 한다. 기여 전 반드시
 [AGENTS.md](AGENTS.md)(운영 규칙 단일 출처)를 읽을 것.
 
+## 개발 환경
+
+Go 1.27.1 이상을 사용한다. 버전 기준은 [go.mod](go.mod)의 `go` 지시문이며 CI와 릴리스도 이 값을 읽는다.
+Docker 빌더는 같은 Go 버전을 사용한다.
+
+```bash
+go version
+go mod download
+make tools
+```
+
+`make tools`는 air 최신 버전과 golangci-lint v2.13.2를 설치한다.
+`$(go env GOPATH)/bin`을 `PATH`에 추가하고, Go 업그레이드 후에는 개발 도구도 다시 설치한다.
+golangci-lint 버전을 변경할 때는 Makefile과 `.github/workflows/ci.yml`의 `GOLANGCI_LINT_VERSION`을 함께 갱신한다.
+
+의존성 갱신 시 `modernc.org/libc`는 `modernc.org/sqlite`의 `go.mod`에 지정된 버전과 정확히 맞춘다.
+생성 코드의 호환성을 위한 [upstream 요구사항](https://pkg.go.dev/modernc.org/sqlite#hdr-Fragile_modernc_org_libc_dependency)이며,
+현재 `modernc.org/sqlite v1.58.0`에 맞춰 `modernc.org/libc v1.75.6`을 유지한다.
+
 ## 개발 워크플로
 
 1. 이슈 또는 디스커션으로 의도 공유(사소한 문서 수정은 생략 가능)
 2. `main`에서 토픽 브랜치 생성: `feat/xxx`, `fix/xxx`, `docs/xxx`
 3. 변경 + 아래 검증 세트 통과
-4. PR 생성 — CI(gofmt/vet/lint/test+coverage gate/migrations/build)가 모두 녹색이어야 머지
+4. PR 생성 — CI(gofmt/lint/vet/test+coverage gate/build/migrations/smoke)가 모두 녹색이어야 머지
 
 ### 커밋 전 필수 검증 세트
 
 ```bash
-gofmt -w . && go vet ./... && go test ./... -race -count=1
+gofmt -w .
+make lint
+go vet ./...
+go test ./... -race -count=1
+CGO_ENABLED=0 go build ./...
 ```
 
 CI는 `gofmt -l` 빈 출력과 커버리지 65% 하한을 강제한다.

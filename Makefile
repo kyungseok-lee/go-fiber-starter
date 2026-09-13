@@ -1,7 +1,7 @@
 COMMIT_HASH := $(shell git rev-parse --short HEAD 2>/dev/null || echo none)
 IMAGE_NAME  := go-fiber-starter
 # ci.yml의 GOLANGCI_LINT_VERSION과 일치 필수
-GOLANGCI_LINT_VERSION ?= v2.13.1
+GOLANGCI_LINT_VERSION ?= v2.13.2
 MIGRATE_NEW ?= change_description
 name ?= # 소문자 별칭: make migrate-new name=add_users
 ifneq ($(strip $(name)),)

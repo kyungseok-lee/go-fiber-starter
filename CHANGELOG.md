@@ -13,6 +13,10 @@
 - 순수 패키지 외 잔여 테스트: migrator prod 차단 규칙, GORM slog 어댑터, health readyz 503,
   ErrorHandler 500 마스킹 계약, mapFiberError 분기, validator 직접 테이블, config Load+미커버 규칙,
   due_date 명시적 null 해제
+- 릴리스 자동화: `.goreleaser.yaml` + 태그 push 시 테스트→바이너리 릴리스 워크플로우
+- E2E 스모크(`scripts/smoke.sh`, CI `smoke` 잡): pg/mysql 실제 DB에서 부팅→CRUD 전 주기 검증
+- 벤치마크(task 목록/생성)와 퍼즈 타깃(parseID, stripScheme)
+- `apperror`/`httpx`/`pagination` 순수 패키지 직접 단위 테스트
 
 ### Fixed
 
@@ -21,16 +25,13 @@
 - CI와 docker-compose의 DB 버전 불일치(pg 17-alpine, mysql 9로 정렬)
 - `.cursor/rules/project.mdc`의 삭제된 common 패키지 참조, README Go 버전 표기(1.27+) 등 문서 드리프트
 
-### Added
-
-- 릴리스 자동화: `.goreleaser.yaml` + 태그 push 시 테스트→바이너리 릴리스 워크플로우
-- E2E 스모크(`scripts/smoke.sh`, CI `smoke` 잡): pg/mysql 실제 DB에서 부팅→CRUD 전 주기 검증
-- 벤치마크(task 목록/생성)와 퍼즈 타깃(parseID, stripScheme)
-- `apperror`/`httpx`/`pagination` 순수 패키지 직접 단위 테스트
-
 ### Changed
 
-- GitHub Actions 의존성 갱신: checkout@v7, setup-go@v7, golangci-lint-action@v7 (dependabot)
+- Go 최소 버전과 Docker 빌더를 1.27.1로 갱신하고, golangci-lint를 v2.13.2로 업데이트
+- SQLite 런타임과 PostgreSQL/MySQL 드라이버, Fiber·Prometheus 관련 모듈 및 `golang.org/x` 간접 의존성 갱신
+- OpenAPI 드리프트 테스트의 YAML 파서를 YAML 조직이 유지보수하는 `go.yaml.in/yaml/v3 v3.0.5`로 전환
+- README·기여 가이드에 Go 버전 기준, 개발 도구 설치, CI lint·마이그레이션·스모크 검증 안내 최신화
+- GitHub Actions 의존성 갱신: checkout@v7, setup-go@v7, golangci-lint-action@v9 (dependabot)
 - CI에 concurrency 취소 설정(같은 브랜치 연속 push 시 구 run 자동 취소)
 - README에 다중 replica rate limiter 한계 및 TRUST_PROXY 배포 주의사항 문서화
 

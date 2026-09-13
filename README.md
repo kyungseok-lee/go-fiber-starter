@@ -16,9 +16,14 @@ Go 최신 버전 + **Fiber v3** + **GORM** 기반 REST API 보일러플레이트
 
 | 도구 | 버전 | 비고 |
 |---|---|---|
-| Go | 1.27+ | Fiber v3 최소 요구 |
+| Go | 1.27.1+ | 프로젝트 최소 요구. [go.mod](go.mod) 기준 |
 | Docker(선택) | — | postgres/mysql 실행 시 |
 | air(선택) | latest | 핫 리로드. `make tools` |
+| golangci-lint(개발) | v2.13.2 | 로컬·CI 동일 버전. `make tools` |
+
+Go 버전의 기준은 `go.mod`의 `go` 지시문이다. CI와 릴리스 워크플로는 이 값을 읽고,
+Docker 빌더도 같은 버전(`golang:1.27.1-alpine`)을 사용한다. 로컬은 `go version`으로 확인한다.
+Go 버전을 올릴 때는 `go.mod`, Dockerfile, 이 문서를 함께 갱신하고 `make tools`로 개발 도구를 다시 설치한다.
 
 ## Quickstart (3분)
 
@@ -228,7 +233,9 @@ go test ./internal/modules/task/ -bench BenchmarkTasksList -benchtime 5x   # 벤
 
 ## CI
 
-`.github/workflows/ci.yml`: gofmt 체크 → vet → test(-race, cover) → coverage gate → build.
+`.github/workflows/ci.yml`의 `verify` 잡은 gofmt 체크 → golangci-lint → vet → test(-race, cover)
+→ coverage gate → CGO 없는 빌드를 실행한다. 별도 `migrations` 잡은 PostgreSQL/MySQL 마이그레이션의
+적용·롤백·재적용을, `smoke` 잡은 두 DB에서 앱 부팅과 CRUD 전체 흐름을 검증한다.
 Docker 이미지: 멀티스테이지 빌드, non-root, HEALTHCHECK(/livez).
 
 ## AI 에이전트 협업 (Codex / Claude / Cursor / opencode 등)

@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	"github.com/gofiber/fiber/v3"
-	"gopkg.in/yaml.v3" // openapi.yaml 파싱 전용. 표준 라이브러리에 YAML 지원이 없어 direct 의존으로 추가했다(설계 승인).
+	"go.yaml.in/yaml/v3" // openapi.yaml 파싱 전용. 표준 라이브러리에 YAML 지원이 없어 direct 의존으로 추가했다(설계 승인).
 
 	"go-fiber-starter/api"
 )
