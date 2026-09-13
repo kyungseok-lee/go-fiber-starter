@@ -7,9 +7,9 @@ import "github.com/gofiber/fiber/v3"
 //
 // 새 모듈 추가 패턴 (README 참고):
 //  1. internal/modules/<name> 패키지를 task와 동일 구조로 생성
-//  2. NewService(NewRepository(db))로 조립
-//  3. RegisterRoutes(v1 fiber.Router) 형태의 함수 제공
-//  4. router.New에서 한 줄 추가
+//  2. internal/router/wiring.go에서 NewService(NewRepository(db))로 조립
+//  3. 서비스와 선택적 guard를 받는 RegisterRoutes 함수 제공
+//  4. internal/router/router.go에서 RegisterRoutes로 라우트 마운트
 func RegisterRoutes(v1 fiber.Router, svc *Service, guard ...fiber.Handler) {
 	h := NewHandler(svc)
 	// fiber v3 Group은 가변 인자가 any라 변환이 필요하다.

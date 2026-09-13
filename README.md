@@ -62,7 +62,7 @@ go run ./cmd/api
 |---|---|---|
 | `APP_ENV` | `local` | local/dev/prod. prod+sqlite 조합 금지 |
 | `APP_PORT` | `8080` | |
-| `LOG_LEVEL` | `info` | debug에서 SQL 파라미터 로그 출력 |
+| `LOG_LEVEL` | `info` | 일반 SQL은 debug, 오류·느린 SQL은 error/warn으로 기록(실제 출력은 로그 레벨에 따름) |
 | `DB_DRIVER` | `sqlite` | postgres / mysql / sqlite |
 | `DB_DSN` | `data/app.db` | 드라이버별 DSN 형식은 `.env.example` 주석 |
 | `DB_AUTO_MIGRATE` | `true` | prod(pg/mysql)에서 true면 시작 거부 |
@@ -115,12 +115,15 @@ curl -s http://localhost:8080/api/v1/tasks -H "Authorization: Bearer $TOKEN"
 
 ## API 예제
 
-모든 응답은 공통 엔벨로프를 사용한다.
+`/api/v1`의 업무 API는 JSON 성공·오류 응답에 공통 엔벨로프를 사용한다. 204 응답은 본문이 없다.
+`/livez`·`/readyz`는 프로브 전용 JSON, `/metrics`는 Prometheus 텍스트, `/openapi.yaml`은 YAML을 반환한다.
 
 ```json
-// 성공                                  // 실패
-{ "success": true, "data": { ... },       { "success": false,
-  "meta": { ... } }                         "error": { "code": "...", "message": "..." } }
+{"success":true,"data":[],"meta":{"page":1,"limit":20,"total_count":0,"total_pages":0}}
+```
+
+```json
+{"success":false,"error":{"code":"TASK_NOT_FOUND","message":"task not found"}}
 ```
 
 ```bash
@@ -165,22 +168,15 @@ curl -s -X POST $BASE/tasks -H 'Content-Type: application/json' -d '{"title":""}
 
 ## 트랜잭션 패턴
 
-트랜잭션 경계는 service 계층에 둔다. 다중 저장소 원자성이 필요하면:
+service는 한 번에 수행할 업무와 변경 규칙을 정하고, repository 인터페이스로 저장을 요청한다.
+현재 task 부분 수정은 [service.go](internal/modules/task/service.go)의 `Update`가 변경 함수를 넘기고,
+[repository.go](internal/modules/task/repository.go)의 `Update(ctx, ...)`가
+`r.db.WithContext(ctx).Transaction(...)` 안에서 조회·변경·저장을 묶는다.
+PostgreSQL/MySQL은 조회에 `FOR UPDATE` 행 잠금을 사용하며 sqlite에는 적용하지 않는다.
 
-```go
-import "go-fiber-starter/internal/database"
-
-func (s *OrderService) Place(ctx context.Context, o Order) error {
-	return database.WithTx(s.db, func(tx *gorm.DB) error {
-		orderRepo := NewOrderRepository(tx)    // tx로 스코프된 repo
-		paymentRepo := payment.NewRepository(tx)
-		if err := orderRepo.Create(ctx, &o); err != nil {
-			return err // 반환하면 롤백
-		}
-		return paymentRepo.Charge(ctx, o.ID)
-	})
-}
-```
+다중 저장소 원자성이 필요하면 service에 업무 단위 인터페이스를 정의하고, 트랜잭션과
+`*gorm.DB`는 repository 구현 안에 둔다. `database.WithTx`는 이를 위한 확장 헬퍼로 남아 있으며
+현재 운영 코드에서 호출하지 않는다. 사용할 때는 repository 안에서 `r.db.WithContext(ctx)`를 전달한다.
 
 ## 마이그레이션 워크플로 (postgres/mysql)
 
@@ -201,6 +197,7 @@ SQL 파일은 `embed.FS`로 바이너리에 포함된다. sqlite는 이 흐름 �
 ```
 cmd/api          진입점(조립 + graceful shutdown)
 cmd/migrate      SQL 마이그레이션 CLI(up/down/version/force)
+api              임베드되는 OpenAPI YAML 스펙
 internal/
   config         env 파싱 + fail-fast 검증
   database       연결/풀/slog 어댑터/AutoMigrate 정책
@@ -210,11 +207,16 @@ internal/
   testutil       handler 테스트 요청 헬퍼
   middleware     요청 로깅, Prometheus 수집
   router         fiber 앱 조립, 전역 ErrorHandler
+  modules/auth   JWT 로그인과 인증 가드
   modules/task   예제 도메인 = 모듈 템플릿
   modules/health livez/readyz
   validator      validate 태그 ↔ Fiber 바인딩 연결
 db/migrations    버전 기반 SQL(postgres, mysql)
 ```
+
+각 파일의 역할, 실제 호출·설정 연결, 유지 이유와 로컬 생성물은
+[전체 파일 목록](docs/file-inventory.md)을 참고한다. 요청 흐름과 계층 경계는
+[아키텍처](docs/architecture.md)에 정리되어 있다.
 
 ## 테스트
 

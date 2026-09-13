@@ -20,24 +20,42 @@ fi
 
 echo "[smoke] driver=${DRIVER} port=${PORT}"
 
+SMOKE_DIR=$(mktemp -d "${TMPDIR:-/tmp}/go-fiber-smoke.XXXXXX")
+BIN="${SMOKE_DIR}/api"
+LOG="${SMOKE_DIR}/api.log"
+APP_PID=""
+cleanup() {
+  local status=$?
+  if [ -n "${APP_PID}" ]; then
+    kill "${APP_PID}" 2>/dev/null || true
+    wait "${APP_PID}" 2>/dev/null || true
+  fi
+  if [ "${status}" -ne 0 ] && [ -f "${LOG}" ]; then
+    tail -n 40 "${LOG}" >&2
+  fi
+  rm -rf -- "${SMOKE_DIR}"
+  exit "${status}"
+}
+trap cleanup EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
+
 # 1. 빌드 + 마이그레이션 (prod 계열 경로를 그대로 밟는다)
 export DB_DRIVER="${DRIVER}" DB_DSN="${DSN}" DB_AUTO_MIGRATE=false APP_PORT="${PORT}"
-BIN="/tmp/smoke-api-$$"   # $$ 접미사로 병렬 실행 충돌 방지
 go build -o "${BIN}" ./cmd/api
 go run ./cmd/migrate up
 
 # 2. 앱 부팅 + readyz 폴링(최대 15초)
-"${BIN}" > "/tmp/smoke-api-$$.log" 2>&1 &
+"${BIN}" > "${LOG}" 2>&1 &
 APP_PID=$!
-trap 'kill ${APP_PID} 2>/dev/null || true' EXIT
 
 for _ in $(seq 1 30); do
   if curl -fsS "${BASE}/readyz" > /dev/null 2>&1; then break; fi
   sleep 0.5
 done
-curl -fsS "${BASE}/readyz" > /dev/null || { echo "readyz failed"; tail "/tmp/smoke-api-$$.log"; exit 1; }
+curl -fsS "${BASE}/readyz" > /dev/null || { echo "readyz failed" >&2; exit 1; }
 
-fail() { echo "FAIL: $1"; exit 1; }
+fail() { echo "FAIL: $1" >&2; exit 1; }
 
 # 3. livez에 빌드 commit 노출 확인
 curl -fsS "${BASE}/livez" | grep -q '"commit"' || fail "livez missing commit field"

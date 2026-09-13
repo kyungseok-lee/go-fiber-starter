@@ -60,7 +60,8 @@ docker compose up -d postgres                 # postgres 기동(mysql은 --profi
 
 ## 응답/에러 규약
 
-- 모든 응답은 `httpx.Envelope`({success, data|error, meta}). 핸들러에서 직접 JSON 작성 금지 — `httpx.OK/Created/NoContent` 사용.
+- `/api/v1` 업무 API의 JSON 응답은 `httpx.Envelope`({success, data|error, meta}). 업무 핸들러는 `httpx.OK/OKWithMeta/Created/NoContent` 사용.
+  204는 빈 본문이며, health 프로브 전용 JSON·Prometheus 텍스트·OpenAPI YAML은 엔벨로프 적용 대상이 아니다.
 - 에러는 `apperror.AppError` 코드 카탈로그(errors.go)로 반환하고 `fmt.Errorf("...: %w")` 래핑.
   도메인 전용 센티널은 해당 모듈 errors.go에 선언한다(apperror 카탈로그에 넣지 않음).
 - 전역 ErrorHandler(router.go): 알 수 없는 에러는 로그에 상세 남기고 클라이언트엔 고정 메시지 500. 내부 메시지 노출 금지.
@@ -80,5 +81,5 @@ docker compose up -d postgres                 # postgres 기동(mysql은 --profi
 
 - 주석은 "왜"만 설명. 자명한 코드 주석 금지.
 - context는 `c.Context()`로 꺼내 service/repository까지 전파. 버림 금지.
-- 페이지네이션 limit은 `pagination.MaxLimit`(100)으로 클램프 — count 비용 방어.
+- 페이지네이션 limit은 `pagination.MaxLimit`(100)으로 클램프 — 조회 행 수·응답 크기 제한. 별도 전체 `Count` 비용은 줄이지 않는다.
 - 사용자 관점의 주요 변경(feat/fix/breaking)은 CHANGELOG.md의 Unreleased 섹션에 한 줄 추가.

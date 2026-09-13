@@ -78,8 +78,10 @@ func Ping(db *gorm.DB) error {
 
 // WithTx는 트랜잭션 경계 헬퍼다. fn이 error를 반환하면 롤백한다.
 //
-//	service에서 다중 repository 원자성이 필요할 때 사용:
-//	  database.WithTx(s.db, func(tx *gorm.DB) error { return repoTx(tx).Do(...) })
+// 저장소 어댑터 안에서 요청 context를 DB에 적용해 호출한다.
+// 서비스에는 *gorm.DB 대신 트랜잭션 작업을 나타내는 인터페이스를 노출한다.
+//
+//	database.WithTx(r.db.WithContext(ctx), func(tx *gorm.DB) error { return repoTx(tx).Do(ctx) })
 func WithTx(db *gorm.DB, fn func(tx *gorm.DB) error) error {
 	return db.Transaction(fn)
 }

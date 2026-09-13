@@ -95,7 +95,7 @@ func New(cfg *config.Config, db *gorm.DB, log *slog.Logger, reg *prometheus.Regi
 	var taskGuard []fiber.Handler
 	if cfg.AuthEnabled {
 		authSvc := auth.NewService(auth.NewDemoAuthenticator(cfg), cfg.AuthJWTSecret, cfg.AuthTokenTTL)
-		// 로그인은 전역 가드 밖에서 자체 예산(IP별 분당)으로 보호한다 — brute force 차단.
+		// 로그인은 task 인증 가드 밖에 두고 전역 rate limit에 IP별 로그인 예산을 추가한다.
 		loginGuard := limiter.New(limiter.Config{
 			Max:               cfg.AuthRateLimitPerMinute,
 			Expiration:        time.Minute,

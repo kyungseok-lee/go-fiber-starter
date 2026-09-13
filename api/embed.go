@@ -7,5 +7,5 @@ import "embed"
 //go:embed openapi.yaml
 var FS embed.FS
 
-// openapi.yaml이 없으면 위 지시문 때문에 컴파일 자체가 실패한다 —
-// 스펙 파일과 코드의 동기화는 이 특성으로 보장된다.
+// openapi.yaml이 없으면 위 지시문 때문에 컴파일 자체가 실패한다.
+// 스펙과 등록 라우트의 일치는 internal/router의 TestOpenAPI_NoRouteDrift가 검증한다.

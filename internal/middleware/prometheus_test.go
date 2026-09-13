@@ -12,7 +12,7 @@ import (
 )
 
 // TestPrometheus_HandlerError_CountedWithRealStatus는 핸들러가 에러를 반환해도
-// 실횅 응답 상태(422)로 카운트됨을 검증한다. ErrorHandler 실행 전 관측하므로
+// 실제 응답 상태(422)로 카운트됨을 검증한다. ErrorHandler 실행 전 관측하므로
 // 실제 응답이 어떻게 매핑되든 라벨은 AppError 상태를 따른다.
 func TestPrometheus_HandlerError_CountedWithRealStatus(t *testing.T) {
 	reg := prometheus.NewRegistry()

@@ -2,7 +2,8 @@
 
 ## 지원 버전
 
-`main` 브랜지(최신 커밋)만 보안 수정을 받는다. 릴리스 태그 체계 도입 전까지 과거 커밋은 지원 대상이 아니다.
+`main` 브랜치(최신 커밋)만 보안 수정을 받는다. 태그 push로 릴리스 바이너리를 배포하지만,
+과거 태그별 유지보수 브랜치나 보안 수정 백포트는 제공하지 않는다.
 
 ## 취약점 보고
 
@@ -34,7 +35,7 @@ GitHub의 비공개 취약점 보고를 사용하십시오:
 - JWT: HS256 강제(`WithValidMethods`), 만료 필수, 시크릿 ≥32바이트 fail-fast
 - 자격증명: constant-time 비교, prod에서 데모 기본값 시작 차단
 - 전송: helmet 보안 헤더, CORS(prod 와일드카드 거부), rate limit(전역 + 로그인 전용), body limit
-- 관측: 에러 응답 실횅 상태 메트릭화, 500 내부 메시지 미노출
-- 의존성: govulncheck(CI 외 로컬 게이트), dependabot(go modules + actions 주간)
+- 관측: 수집 미들웨어에 도달한 요청의 실제 응답 상태 계측, 알 수 없는 서버 에러의 내부 메시지 미노출
+- 의존성: dependabot(go modules + actions 주간). `govulncheck`는 필요 시 수행하는 수동 검사이며 현재 CI 필수 게이트가 아니다.
 
 알려진 한계(스타터 범위)는 README Roadmap과 `docs/authenticator-sketch.md`를 참고하라.

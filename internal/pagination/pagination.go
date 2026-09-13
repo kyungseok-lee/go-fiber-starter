@@ -23,7 +23,7 @@ func NewPageQuery(page, limit int) PageQuery {
 		limit = DefaultLimit
 	}
 	if limit > MaxLimit {
-		limit = MaxLimit // count 쿼리 비용과 응답 크기 방어
+		limit = MaxLimit // 조회 행 수와 응답 크기 제한
 	}
 	return PageQuery{Page: page, Limit: limit}
 }

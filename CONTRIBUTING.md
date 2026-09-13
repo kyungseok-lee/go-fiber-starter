@@ -28,6 +28,7 @@ golangci-lint 버전을 변경할 때는 Makefile과 `.github/workflows/ci.yml`�
 2. `main`에서 토픽 브랜치 생성: `feat/xxx`, `fix/xxx`, `docs/xxx`
 3. 변경 + 아래 검증 세트 통과
 4. PR 생성 — CI(gofmt/lint/vet/test+coverage gate/build/migrations/smoke)가 모두 녹색이어야 머지
+5. 완료한 임시 브랜치·워크트리·검증 생성물을 정리한다. 보관할 작업과 로컬 데이터는 유지한다.
 
 ### 커밋 전 필수 검증 세트
 
@@ -47,8 +48,9 @@ CI는 `gofmt -l` 빈 출력과 커버리지 65% 하한을 강제한다.
 - 새 도메인은 [internal/modules/task](internal/modules/task/)를 복제하고
   [.agents/rules/new-module-checklist.md](.agents/rules/new-module-checklist.md) 체크리스트를 따른다.
 - 마이그레이션 이원화: sqlite=AutoMigrate(dev), postgres/mysql prod=`cmd/migrate` SQL 버전 관리 — 둘 다 작성.
-- 응답/에러는 `httpx.Envelope` / `apperror.AppError` 카탈로그로 통일. 도메인 센티널은 모듈 errors.go에.
-- API 변경 시 `api/openapi.yaml` 동기화(드리프트 테스트가 CI에서 검증함).
+- 업무 API의 JSON 응답/에러는 `httpx.Envelope` / `apperror.AppError` 카탈로그로 통일. 204는 빈 본문이며 프로브·메트릭·스펙은 별도 형식이다.
+- API 변경 시 `api/openapi.yaml`의 요청·응답 계약을 동기화한다. CI 드리프트 테스트는 경로·메서드 일치를 검사하며, 응답 계약은 해당 handler 테스트로 검증한다.
+- 파일을 추가·이동·제거하거나 역할을 바꾸면 [전체 파일 목록](docs/file-inventory.md)의 경로·연결·유지 이유도 갱신한다.
 
 ## 커밋 메시지
 

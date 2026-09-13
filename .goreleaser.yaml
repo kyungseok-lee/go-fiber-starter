@@ -24,9 +24,6 @@ archives:
   - formats: [tar.gz]
     name_template: >-
       {{ .ProjectName }}_{{ .Tag }}_{{ title .Os }}_{{ .Arch }}
-    format_overrides:
-      - goos: windows
-        formats: [zip]
 
 checksum:
   name_template: checksums.txt

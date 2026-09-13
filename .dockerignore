@@ -1,0 +1,24 @@
+# 저장소 이력과 로컬 환경 시크릿은 이미지 빌드에 필요하지 않다.
+**/.git
+**/.env
+**/.env.*
+!**/.env.example
+
+# 생성물과 로컬 DB는 호스트에만 유지한다.
+bin/
+tmp/
+dist/
+data/
+**/*.out
+**/coverage.html
+**/*.test
+**/*.prof
+
+# OS/에디터 생성물
+**/.DS_Store
+**/Thumbs.db
+**/.idea
+**/.vscode
+**/*.swp
+**/*.swo
+**/*~

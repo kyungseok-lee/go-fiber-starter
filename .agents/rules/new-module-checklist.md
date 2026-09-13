@@ -20,7 +20,7 @@
 
 - [ ] sqlite(dev): `cmd/api/main.go`의 `AutoMigrateIfNeeded(...)` 목록에 모델 추가
 - [ ] postgres/mysql(prod): `make migrate-new name=<desc>`로 SQL 파일 생성 후 양쪽 드라이버 작성(up/down)
-- [ ] 한쪽만 하면 환경에 따라 스키마 누락 → 시작 시 readyz 실패로 발견됨
+- [ ] 양쪽 스키마를 테스트·API 호출·실제 DB 스모크로 확인(`readyz`는 DB ping만 검사하므로 테이블 누락을 검출하지 않음)
 
 ## 4. 조립
 
@@ -34,8 +34,9 @@
 - [ ] handler 통합 테스트: 임시 디렉터리 sqlite + 실제 GORM + app.Test()
   - 성공/검증실패(422)/미존재(404) 시나리오 최소 3개
   - 응답 디코딩은 빈 본문(204 등) 건너뛰는 `testutil.Do` 헬퍼 사용
-- [ ] `gofmt -w . && go vet ./... && go test ./... -race` 통과
+- [ ] `CONTRIBUTING.md`의 포맷·lint·vet·race 테스트·CGO 없는 빌드 검증 통과
 
 ## 6. 문서
 
 - [ ] README의 API 예제 섹션에 curl 추가
+- [ ] `api/openapi.yaml`에 라우트·요청·응답 계약 추가, `docs/file-inventory.md`에 새 파일 역할 등록

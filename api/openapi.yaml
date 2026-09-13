@@ -1,8 +1,8 @@
 openapi: 3.0.3
 info:
   title: go-fiber-starter API
-  description: Go + Fiber v3 + GORM 기반 REST API 보일러플레이트. 성공/실패 모두 공통 Envelope로 응답한다(/livez
-    /readyz /metrics 등 운영 프로브 제외).
+  description: Go + Fiber v3 + GORM 기반 REST API 보일러플레이트. /api/v1 업무 API의 JSON 성공·오류 응답은
+    공통 Envelope를 사용한다. 204는 빈 본문이며 health 프로브 JSON, Prometheus 텍스트, OpenAPI YAML은 별도 형식이다.
   version: 1.0.0
 servers:
 - url: /
@@ -24,7 +24,7 @@ paths:
   /readyz:
     get:
       summary: Readiness 프로브
-      description: DB ping 포함 의존성 준비 상태를 확인한다.
+      description: DB ping으로 연결 상태를 확인한다. 테이블·마이그레이션 적용 여부는 검사하지 않는다.
       operationId: readyz
       tags:
       - system
@@ -238,6 +238,18 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/TaskEnvelope'
+        '400':
+          description: 잘못된 id(INVALID_REQUEST, 양의 정수 필요)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '429':
+          description: 전역 rate limit 초과(RATE_LIMITED, IP별 RATE_LIMIT_PER_MINUTE)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
         '404':
           description: 존재하지 않는 task(TASK_NOT_FOUND)
           content:
@@ -273,6 +285,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/TaskEnvelope'
+        '429':
+          description: 전역 rate limit 초과(RATE_LIMITED, IP별 RATE_LIMIT_PER_MINUTE)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
         '400':
           description: 본문 파싱 실패 또는 잘못된 id
           content:
@@ -309,6 +327,18 @@ paths:
       responses:
         '204':
           description: 삭제됨(본문 없음)
+        '400':
+          description: 잘못된 id(INVALID_REQUEST, 양의 정수 필요)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+        '429':
+          description: 전역 rate limit 초과(RATE_LIMITED, IP별 RATE_LIMIT_PER_MINUTE)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
         '404':
           description: 존재하지 않는 task(TASK_NOT_FOUND)
           content:
@@ -344,7 +374,8 @@ components:
   schemas:
     Envelope:
       type: object
-      description: 모든 API 응답의 공통 래퍼. success/data/error/meta 중 해당하는 것만 직렬화된다.
+      description: /api/v1 업무 API의 JSON 응답 래퍼. 204 빈 본문과 health·metrics·OpenAPI 형식에는 적용하지 않는다.
+        success/data/error/meta 중 해당하는 것만 직렬화된다.
       required:
       - success
       properties:

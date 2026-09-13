@@ -10,7 +10,7 @@ alwaysApply: true
 - 스택: Go + Fiber v3 + GORM. Fiber v2 문법 금지(`c.Bind().Body()`, `func(c fiber.Ctx) error`).
 - 계층: handler → service → repository → model. `*gorm.DB`는 repository에만, `fiber.Ctx`는 handler에만.
 - Repository 인터페이스는 service.go(소비자)에 선언. 새 도메인은 `internal/modules/task/` 복제.
-- 응답/에러: `httpx.Envelope` / `apperror.AppError` 카탈로그. 500은 내부 메시지 노출 금지.
+- 업무 API JSON 응답/에러: `httpx.Envelope` / `apperror.AppError` 카탈로그. 204는 빈 본문, health JSON·metrics 텍스트·OpenAPI YAML은 별도 형식. 500은 내부 메시지 노출 금지.
 - 마이그레이션 이원화: sqlite=AutoMigrate(dev), pg/mysql prod=`cmd/migrate` SQL 버전 관리.
-- CI는 `gofmt -l` 빈 출력 요구. 커밋 전: `gofmt -w . && go vet ./... && go test ./... -race`.
+- CI는 `gofmt -l` 빈 출력 요구. 커밋 전 포맷·lint·vet·race 테스트·CGO 없는 빌드 명령은 `CONTRIBUTING.md` 참고.
 - 주제별 상세 규칙: `.agents/rules/*.md`(OpenCode 자동 로드, 타 도구는 AGENTS.md의 @import 포인터).

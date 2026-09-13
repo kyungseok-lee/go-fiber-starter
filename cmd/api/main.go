@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 
 	"github.com/gofiber/fiber/v3"
@@ -80,7 +81,7 @@ func run() error {
 
 func newLogger(cfg *config.Config) *slog.Logger {
 	var level slog.Level
-	switch cfg.LogLevel {
+	switch strings.ToLower(cfg.LogLevel) {
 	case "debug":
 		level = slog.LevelDebug
 	case "warn":

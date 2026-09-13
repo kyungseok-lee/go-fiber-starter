@@ -1,5 +1,3 @@
-COMMIT_HASH := $(shell git rev-parse --short HEAD 2>/dev/null || echo none)
-IMAGE_NAME  := go-fiber-starter
 # ci.yml의 GOLANGCI_LINT_VERSION과 일치 필수
 GOLANGCI_LINT_VERSION ?= v2.13.2
 MIGRATE_NEW ?= change_description
@@ -50,10 +48,10 @@ tools: ## 개발 도구 설치(air, golangci-lint)
 	go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION)
 
 docker-up: ## postgres + 앱 컨테이너 기동
-	docker compose up -d --build
+	docker compose --profile full up -d --build
 
 docker-down: ## 컨테이너 중지/제거
-	docker compose down -v
+	docker compose --profile full down -v
 
 smoke: ## 실제 DB 대상 E2E 스모크 (compose postgres 기동 필요)
 	./scripts/smoke.sh postgres 'postgres://starter:starter@localhost:5432/starter?sslmode=disable' 8090

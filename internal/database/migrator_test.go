@@ -27,12 +27,7 @@ func testConfig(driver config.DBDriver, env config.Env, autoMigrate bool) *confi
 func TestAutoMigrateIfNeeded_ProdPostgres_HardBlocked(t *testing.T) {
 	cfg := testConfig(config.DBDriverPostgres, config.EnvProd, true)
 
-	// db는 정책 위반 판정에 사용되지 않지만 nil이면 안 되므로 최소 인스턴스를 만든다.
-	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
-	if err != nil {
-		t.Fatal(err)
-	}
-	err = AutoMigrateIfNeeded(context.Background(), cfg, db, &task.Task{})
+	err := AutoMigrateIfNeeded(context.Background(), cfg, nil, &task.Task{})
 	if err == nil || !strings.Contains(err.Error(), "DB_AUTO_MIGRATE") {
 		t.Fatalf("prod pg automigrate must be blocked, got %v", err)
 	}
@@ -50,8 +45,9 @@ func TestAutoMigrateIfNeeded_Disabled_Noop(t *testing.T) {
 	if err := AutoMigrateIfNeeded(context.Background(), cfg, db, &task.Task{}); err != nil {
 		t.Fatalf("disabled flag must noop, got %v", err)
 	}
-	var count int64
-	db.Table("tasks").Count(&count) // 테이블 자체가 없어야 한다 — 에러만 안 나면 됨
+	if db.Migrator().HasTable(&task.Task{}) {
+		t.Fatal("disabled auto-migrate created tasks table")
+	}
 }
 
 func TestAutoMigrateIfNeeded_SQLiteDev_CreatesTables(t *testing.T) {
