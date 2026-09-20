@@ -13,7 +13,7 @@ require (
 	github.com/prometheus/client_golang v1.24.1
 	go.yaml.in/yaml/v3 v3.0.5
 	gorm.io/driver/mysql v1.6.0
-	gorm.io/driver/postgres v1.6.2
+	gorm.io/driver/postgres v1.6.3
 	gorm.io/gorm v1.31.2
 )
 
