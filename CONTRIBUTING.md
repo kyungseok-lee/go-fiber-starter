@@ -18,9 +18,32 @@ make tools
 `$(go env GOPATH)/bin`을 `PATH`에 추가하고, Go 업그레이드 후에는 개발 도구도 다시 설치한다.
 golangci-lint 버전을 변경할 때는 Makefile과 `.github/workflows/ci.yml`의 `GOLANGCI_LINT_VERSION`을 함께 갱신한다.
 
-의존성 갱신 시 `modernc.org/libc`는 `modernc.org/sqlite`의 `go.mod`에 지정된 버전과 정확히 맞춘다.
-생성 코드의 호환성을 위한 [upstream 요구사항](https://pkg.go.dev/modernc.org/sqlite#hdr-Fragile_modernc_org_libc_dependency)이며,
-현재 `modernc.org/sqlite v1.58.0`에 맞춰 `modernc.org/libc v1.75.6`을 유지한다.
+## 의존성 갱신
+
+공식 릴리스와 Go 모듈 프록시에서 최신 안정 버전을 확인한다. `go list -m -u all`은
+현재 모듈 경로의 업데이트만 보여주므로, `/v2` 같은 새 메이저 경로는 upstream 릴리스도 확인한다.
+프리릴리스는 제외하고, 직접 의존성과 테스트·간접 의존성을 함께 갱신한다.
+
+```bash
+go list -m -u all
+go get -u -t ./...
+```
+
+`modernc.org/libc`는 `modernc.org/sqlite`의 `go.mod`에 지정된 버전과 정확히 맞춘다.
+생성 코드의 호환성을 위한 [upstream 요구사항](https://pkg.go.dev/modernc.org/sqlite#hdr-Fragile_modernc_org_libc_dependency)이다.
+2026-09-22 기준 `modernc.org/sqlite v1.59.0`은 `modernc.org/libc v1.75.7`을 요구하므로,
+위 명령으로 libc가 독립적인 최신 버전까지 올라갔다면 아래처럼 SQLite 요구 버전으로 되돌린다.
+다음 갱신 때는 새 SQLite 버전의 요구값을 먼저 확인한다.
+
+```bash
+go get modernc.org/libc@v1.75.7
+go mod tidy
+go mod verify
+```
+
+`go.mod`·`go.sum` 변경을 검토하고 아래 필수 검증 세트를 실행한다. DB 드라이버 변경 시에는
+PostgreSQL/MySQL의 마이그레이션 적용·롤백·재적용과 `scripts/smoke.sh`도 확인한다(CI의 `migrations`·`smoke` 잡).
+README의 의존성 표와 CHANGELOG의 Unreleased를 함께 갱신하고, `go mod tidy -diff`가 빈 출력인지 확인한다.
 
 ## 개발 워크플로
 

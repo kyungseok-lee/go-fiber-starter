@@ -25,6 +25,30 @@ Go 버전의 기준은 `go.mod`의 `go` 지시문이다. CI와 릴리스 워크�
 Docker 빌더도 같은 버전(`golang:1.27.1-alpine`)을 사용한다. 로컬은 `go version`으로 확인한다.
 Go 버전을 올릴 때는 `go.mod`, Dockerfile, 이 문서를 함께 갱신하고 `make tools`로 개발 도구를 다시 설치한다.
 
+### 의존성 기준
+
+2026-09-22에 Go 모듈 프록시와 공식 릴리스 기준으로 안정 버전을 확인했다.
+직접 의존성은 아래와 같으며, 간접 의존성을 포함한 정확한 버전은 [go.mod](go.mod)에 고정한다.
+
+| 용도 | 모듈 | 버전 |
+|---|---|---|
+| HTTP | `github.com/gofiber/fiber/v3` | v3.5.0 |
+| ORM | `gorm.io/gorm` | v1.31.2 |
+| PostgreSQL | `gorm.io/driver/postgres` | v1.6.3 |
+| MySQL | `gorm.io/driver/mysql` | v1.6.0 |
+| SQLite GORM 드라이버 | `github.com/glebarez/sqlite` | v1.11.0 |
+| SQL 마이그레이션 | `github.com/golang-migrate/migrate/v4` | v4.20.1 |
+| 입력 검증 | `github.com/go-playground/validator/v10` | v10.30.5 |
+| JWT | `github.com/golang-jwt/jwt/v5` | v5.3.1 |
+| 환경변수 파싱 | `github.com/caarlos0/env/v11` | v11.4.1 |
+| `.env` 로드 | `github.com/joho/godotenv` | v1.5.1 |
+| Prometheus | `github.com/prometheus/client_golang` | v1.24.1 |
+| OpenAPI 테스트용 YAML | `go.yaml.in/yaml/v3` | v3.0.5 |
+
+SQLite 런타임은 간접 의존성 `modernc.org/sqlite v1.59.0`을 사용한다.
+`modernc.org/libc`는 [upstream 호환성 지침](https://pkg.go.dev/modernc.org/sqlite#hdr-Fragile_modernc_org_libc_dependency)에 따라
+SQLite가 요구하는 v1.75.7로 맞춘다. 의존성 갱신·검증 절차는 [기여 가이드](CONTRIBUTING.md#의존성-갱신)를 참고한다.
+
 ## Quickstart (3분)
 
 ```bash
