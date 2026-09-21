@@ -10,7 +10,7 @@
 **공개 Issue로 보고하지 마십시오.**
 
 GitHub의 비공개 취약점 보고를 사용하십시오:
-[Security → Report a vulnerability](https://github.com/inininax/go-fiber-starter/security/advisories/new)
+[Security → Report a vulnerability](https://github.com/kyungseok-lee/go-fiber-starter/security/advisories/new)
 
 보고 시 포함할 정보:
 

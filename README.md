@@ -1,6 +1,6 @@
 # go-fiber-starter
 
-[![CI](https://github.com/inininax/go-fiber-starter/actions/workflows/ci.yml/badge.svg)](https://github.com/inininax/go-fiber-starter/actions/workflows/ci.yml)
+[![CI](https://github.com/kyungseok-lee/go-fiber-starter/actions/workflows/ci.yml/badge.svg)](https://github.com/kyungseok-lee/go-fiber-starter/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 Go 최신 버전 + **Fiber v3** + **GORM** 기반 REST API 보일러플레이트.
