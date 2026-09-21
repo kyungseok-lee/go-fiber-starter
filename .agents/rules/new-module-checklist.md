@@ -8,7 +8,7 @@
 - [ ] `internal/modules/<name>/` 에 model.go / dto.go / repository.go / service.go / handler.go / routes.go 생성
 - [ ] Repository **인터페이스는 service.go(소비자)에 선언**, GORM 구현은 repository.go
 - [ ] DTO ↔ 모델 매핑은 명시적 함수로 (toResponse 등). 모델 직접 노출 금지
-- [ ] fiber.Ctx는 handler에만, *gorm.DB는 repository에만
+- [ ] service에는 fiber.Ctx·*gorm.DB를 노출하지 않음(HTTP 미들웨어와 DB 조립 코드는 각 타입 사용 가능)
 
 ## 2. 검증/에러 연결
 
@@ -24,9 +24,9 @@
 
 ## 4. 조립
 
-- [ ] `internal/router/wiring.go`: `<name>NewService(<name>NewRepository(db))`
+- [ ] `internal/router/wiring.go`: `<name>.NewService(<name>.NewRepository(db))`
 - [ ] `internal/router/router.go`: `<name>.RegisterRoutes(v1, svc)`
-- [ ] 인증 보호가 필요하면 guard 전달 방법은 auth/routes.go와 router.go의 AUTH_ENABLED 분기 참고
+- [ ] 인증 보호가 필요하면 guard 전달 방법은 task/routes.go와 router.go의 AUTH_ENABLED 분기 참고(로그인 자체는 인증 가드 대상이 아님)
 
 ## 5. 테스트 (커밋 전 필수)
 

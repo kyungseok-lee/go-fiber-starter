@@ -1,20 +1,22 @@
 # 전체 파일 역할과 정리 기준
 
-2026-09-14에 소스 본문, 호출·import 관계, Go 테스트 자동 발견, 임베드 입력, 도구 설정과 문서 링크를 대조했다.
-이 목록은 최종 변경을 포함한 프로젝트 파일 **103개**(Git 추적 대상 **102개**, 로컬 SQLite DB **1개**)를 경로별로 기록한다.
+2026-09-22에 소스 본문, 호출·import 관계, Go 테스트 자동 발견, 임베드 입력, 도구 설정과 문서 링크를 다시 대조했다.
+이 목록은 `git ls-files` 기준 Git 추적 파일·심링크 **102개**를 경로별로 기록한다.
+로컬 SQLite DB와 빌드 산출물은 실행 여부에 따라 생기므로 추적 파일 수에 포함하지 않는다.
 Git 자체가 관리하는 `.git/` 내부 객체·인덱스·참조·로그는 버전 관리 메타데이터로 보존하며 아래 프로젝트 파일 수에는 포함하지 않는다.
 
 ## 판단 결과
 
 - 프로젝트와 무관해 통째로 삭제할 소스·설정·문서 파일은 없었다. Go가 직접 import하지 않는 테스트·퍼즈 입력·설계 문서·도구 진입점도 용도를 확인했다.
-- Makefile의 사용하지 않는 변수와 릴리스 대상에 없는 Windows 압축 설정을 제거했다. 전체 Docker 스택 명령, 스모크 임시파일 정리, AutoMigrate 검증 및 로그 수준 처리를 보완했다.
+- 2026-09-14 초기 점검에서 Makefile의 사용하지 않는 변수와 릴리스 대상에 없는 Windows 압축 설정을 제거했다. 전체 Docker 스택 명령, 스모크 임시파일 정리, AutoMigrate 검증 및 로그 수준 처리를 보완했다.
 - `.dockerignore`로 Git 메타데이터·로컬 DB·환경파일·빌드 산출물을 컨테이너 빌드에서 제외한다. Go 소스·모듈 파일·SQL·OpenAPI는 빌드 입력으로 유지한다.
-- `data/app.db`는 `internal/config/config.go`의 기본 경로이며 `Task` 모델과 일치하는 데이터가 있는 개발 DB다. 프로젝트 관련 로컬 데이터이므로 보존하고 Git에 올리지 않는다.
+- `data/app.db`는 `internal/config/config.go`의 기본 개발 DB 경로다. 새 clone에는 없으며 sqlite 앱을 실행하면 생성된다. 기존 로컬 데이터가 있으면 보존하고 Git에 올리지 않는다.
+- `.air.toml`의 작업 디렉터리는 문자열 `"."`로 지정한다. boolean 값은 Air가 파싱하지 못하므로 `make dev` 실행을 막는다.
 - `PROMPT.md`와 DB 인증 스케치는 설계·확장 참고 문서다. 실제 운영 규칙은 `AGENTS.md`, 현재 동작은 소스와 테스트가 기준이다. `database.WithTx`도 현재 호출부가 없는 문서화된 확장 헬퍼다.
 
 ## 파일별 근거
 
-`유지·갱신`은 파일을 유지하면서 이번 점검에서 내용 또는 동작을 바로잡은 경우다. `추가`는 이번 점검 결과를 반영한 새 파일이다.
+`유지·갱신`과 `추가`는 2026-09-14 초기 점검의 처리 기록이며, 경로와 역할 설명은 현재 소스에 맞춰 유지한다.
 
 ### 실행 소스와 임베드 입력 (38개)
 
@@ -91,7 +93,7 @@ Git 자체가 관리하는 `.git/` 내부 객체·인덱스·참조·로그는 �
 | [internal/router/router_test.go](../internal/router/router_test.go) | 전체 라우터 조립·인증/전역 제한·프로브·에러 매핑 회귀 테스트 — TestAuthLimiter_*/TestGlobalLimiter_SkipsProbeEndpoints → New의 limiter 조립; TestAuthDisabled_LoginRouteAbsent; TestLivez_ReportsBuildCommit; TestErrorHandler_InternalErrorMasked → ErrorHandler; TestMapFiberError_Branches → mapFiberError | 유지 |
 | [internal/validator/bind_test.go](../internal/validator/bind_test.go) | 검증·파싱 오류의 HTTP 에러 변환 단위 테스트 — TestBindErrorToAppError_ValidationViolation_422WithFieldDetails/ParseFailure_400/WrappedValidationErrors_Still422 → BindErrorToAppError; 래핑 오류와 field detail 보존 확인 | 유지 |
 
-### 문서·설정·개발 도구와 로컬 데이터 (38개)
+### 문서·설정·개발 도구 (37개)
 
 | 파일 | 역할과 사용 근거 | 처리 |
 |---|---|---|
@@ -124,7 +126,6 @@ Git 자체가 관리하는 `.git/` 내부 객체·인덱스·참조·로그는 �
 | [PROMPT.md](../PROMPT.md) | 프로젝트 설계 사양과 초기 의도 기록 — AGENTS.md와 README 개발 사양 참조; 현재 운영 규칙은 AGENTS.md 우선 | 유지·갱신 |
 | [README.md](../README.md) | 프로젝트 사용 및 구조 안내 — 저장소 기본 문서; Quickstart/API/테스트/개발 규칙 링크 | 유지·갱신 |
 | [SECURITY.md](../SECURITY.md) | 보안 보고와 지원 정책 — CONTRIBUTING.md의 취약점 보고 링크; GitHub 보안 정책 진입점 | 유지·갱신 |
-| `data/app.db` | 로컬 개발용 SQLite 데이터 — config.DBDSN 기본경로와 tasks 모델 컬럼 일치; 미추적 앱 데이터이므로 유지 | 로컬 보존·Git 제외 |
 | [docker-compose.yml](../docker-compose.yml) | 로컬 DB와 전체 앱 스택 조립 — Makefile docker-up/down와 README PostgreSQL/MySQL 실행 절차 | 유지 |
 | [docs/architecture.md](../docs/architecture.md) | 요청·계층·DB 정책 설명 — CHANGELOG.md와 전체 파일 목록의 설계 참조 | 유지·갱신 |
 | [docs/authenticator-sketch.md](../docs/authenticator-sketch.md) | 추후 DB 인증 확장 설계 — README Roadmap와 SECURITY.md, docs/architecture.md 참조; 구현 전 참고 문서 | 유지 |
@@ -133,6 +134,11 @@ Git 자체가 관리하는 `.git/` 내부 객체·인덱스·참조·로그는 �
 | [go.sum](../go.sum) | 다운로드 모듈 체크섬 — Go 모듈 다운로드 및 go mod verify 무결성 검사 | 유지 |
 | [opencode.json](../opencode.json) | OpenCode 상세 규칙 로딩 설정 — .agents/rules/**/*.md instructions glob; AGENTS.md에 로딩 방식 명시 | 유지 |
 | [scripts/smoke.sh](../scripts/smoke.sh) | 실제 DB 기반 앱 CRUD 스모크 — Makefile smoke 및 CI postgres/mysql smoke 단계 | 유지·갱신 |
+
+## 로컬 생성물
+
+`data/app.db`는 기본 SQLite 실행 시 생성되는 개발 데이터이며 `.gitignore`와 `.dockerignore`에서 제외한다.
+존재 여부와 내용은 작업 환경마다 다르다. `.env`, `bin/`, `tmp/`, `dist/`, 커버리지 파일도 추적 목록에 포함하지 않는다.
 
 ## 이후 파일 정리
 

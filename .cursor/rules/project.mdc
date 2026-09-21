@@ -8,7 +8,7 @@ alwaysApply: true
 단일 출처: 루트 `AGENTS.md`. 이 파일은 요약본(심링크 불가한 mdc 형식).
 
 - 스택: Go + Fiber v3 + GORM. Fiber v2 문법 금지(`c.Bind().Body()`, `func(c fiber.Ctx) error`).
-- 계층: handler → service → repository → model. `*gorm.DB`는 repository에만, `fiber.Ctx`는 handler에만.
+- 계층: handler → service → repository → model. service에는 `fiber.Ctx`·`*gorm.DB` 노출 금지. HTTP 미들웨어·헬퍼와 DB 인프라·조립 코드는 각 프레임워크 타입을 사용한다.
 - Repository 인터페이스는 service.go(소비자)에 선언. 새 도메인은 `internal/modules/task/` 복제.
 - 업무 API JSON 응답/에러: `httpx.Envelope` / `apperror.AppError` 카탈로그. 204는 빈 본문, health JSON·metrics 텍스트·OpenAPI YAML은 별도 형식. 500은 내부 메시지 노출 금지.
 - 마이그레이션 이원화: sqlite=AutoMigrate(dev), pg/mysql prod=`cmd/migrate` SQL 버전 관리.

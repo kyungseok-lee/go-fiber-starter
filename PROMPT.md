@@ -19,7 +19,8 @@
 
 1. **12-Factor**: 설정은 환경변수에서만 주입. 로그는 stdout JSON 스트림.
 2. **레이어드 아키텍처 + 의존성 방향 고정**: `handler → service → repository → model`.
-   상위 계층만 하위를 참조. `fiber.Ctx`는 handler에, `*gorm.DB`는 repository 계층에만 노출.
+   상위 계층만 하위를 참조. service에 `fiber.Ctx`·`*gorm.DB`를 노출하지 않는다.
+   HTTP 미들웨어·헬퍼와 DB 인프라·조립 코드는 각 프레임워크 타입을 사용한다.
 3. **인터페이스 소비자 정의**: service가 필요한 repository 인터페이스를 service 패키지에 선언 → mock 용이.
 4. **Fail-fast**: 잘못된 설정/DB 연결 실패는 시작 시 즉시 종료(exit 1).
 5. **Graceful shutdown**: SIGTERM/SIGINT 수신 시 새 요청 차단 → 진행 중 요청 완료 대기 → DB 커넥션 종료.
@@ -30,11 +31,11 @@
 | 항목 | 선택 | 비고 |
 |---|---|---|
 | Go | 현재 `go.mod`의 `go` 지시문 이상 | `go version` 확인. 로컬·CI·Docker 버전 기준은 `go.mod` |
-| HTTP | `github.com/gofiber/fiber/v3` | 최신 안정 버전 |
-| ORM | `gorm.io/gorm` | v2 계열 최신 |
+| HTTP | `github.com/gofiber/fiber/v3` | go.mod에 고정한 버전 |
+| ORM | `gorm.io/gorm` | GORM v2 API, go.mod에 고정한 모듈 버전 |
 | DB 드라이버 | `gorm.io/driver/postgres`, `gorm.io/driver/mysql`, `github.com/glebarez/sqlite`(순수 Go) | env로 선택 |
 | 마이그레이션 | `github.com/golang-migrate/migrate/v4` + embed.FS | prod 경로 |
-| 설정 | `github.com/caarlos0/env` + `joho/godotenv` | |
+| 설정 | `github.com/caarlos0/env/v11` + `github.com/joho/godotenv` | |
 | 검증 | `go-playground/validator/v10` (Fiber Bind와 연동) | |
 | 로깅 | 표준 `log/slog` (JSON) | GORM logger 어댑팅 |
 | 메트릭 | `github.com/prometheus/client_golang` | `/metrics` |
@@ -124,7 +125,7 @@ go-fiber-starter/
 
 ### 5.3 마이그레이션 전략 (이원화 — 중요)
 - **dev/test(sqlite)**: `AutoMigrate` 허용 (기본 on). 빠른 개발 사이클용.
-- **prod(postgres/mysql)**: **버전 기반 SQL 마이그레이션(golang-migrate)만 사용**. `db/migrations/<driver>/NNNN_*.up.sql|down.sql`,
+- **prod(postgres/mysql)**: **버전 기반 SQL 마이그레이션(golang-migrate)만 사용**. `db/migrations/<driver>/NNNNNN_name.{up,down}.sql`,
   `embed.FS`로 바이너리 임베드. `cmd/migrate` CLI: `up|down|version|force`.
 - AutoMigrate는 prod(postgres/mysql)에서 하드 차단(`migrate up` 사용 안내).
   local/dev의 PostgreSQL/MySQL에서는 경고 후 허용되지만 실제 데이터는 버전 SQL로 관리한다.
@@ -157,7 +158,7 @@ health 프로브는 전용 JSON, 메트릭은 텍스트, OpenAPI는 YAML 형식�
 ```
 - `apperror.AppError{Code, Status, Message, Details}` + 생성자(`NewBadRequest`/`NewValidation`).
   도메인 전용 센티널(예: TASK_NOT_FOUND)은 해당 모듈 `errors.go`에 선언한다.
-- **에러 코드 카탈로그** 상수화: `INVALID_REQUEST(422)`, `NOT_FOUND(404)`, `CONFLICT(409)`,
+- **에러 코드 카탈로그** 상수화: `INVALID_REQUEST(400 파싱/422 검증)`, `NOT_FOUND(404)`, `CONFLICT(409)`,
   `INTERNAL_ERROR(500)`, `TASK_NOT_FOUND(404)` …
 - service/repository는 필요 시 `fmt.Errorf("...: %w", err)`로 원인을 보존한다. task 미존재는 `ErrTaskNotFound`를 사용하며,
   repository `Update`가 반환한 범용 `apperror.ErrNotFound`는 service에서 도메인 에러로 변환한다. 전역 `ErrorHandler`에서
@@ -185,9 +186,10 @@ health 프로브는 전용 JSON, 메트릭은 텍스트, OpenAPI는 YAML 형식�
 
 ### 5.8 운영/DX 도구
 - **Makefile**: `help run dev tools smoke test test-cov lint vet fmt build tidy docker-up docker-down migrate-up migrate-down migrate-new name=` — `make`만 치면 help.
-- **air**: `.air.toml` (tmp/ 빌드, cmd/api 감시).
+- **air**: `.air.toml` (`root = "."`, tmp/api 빌드, cmd/internal/db/api 아래의 지정 확장자 감시).
 - **Dockerfile**: 멀티스테이지(golang 빌드 → alpine), non-root, HEALTHCHECK(/livez), CGO_ENABLED=0.
-- **docker-compose.yml**: `postgres`(기본, healthcheck 포함), `mysql`(profile), `app`(profile full).
+- **docker-compose.yml**: `postgres`(기본, healthcheck 포함), `mysql`(profile mysql),
+  `migrate`와 `app`(profile full). PostgreSQL 준비 → migrate 성공 → app 시작 순서다.
 - **CI (.github/workflows/ci.yml)**: checkout → setup-go(go.mod, cache) → `gofmt -l` → golangci-lint → `go vet`
   → race 테스트(전체 패키지 커버리지) → 65% 게이트 → CGO 없는 빌드. PostgreSQL/MySQL 마이그레이션·스모크는 별도 잡이다.
 - **README.md**(한국어): 3분 Quickstart(sqlite 무설치 강조), 환경변수 표, API curl 예제 전체,
@@ -201,12 +203,14 @@ health 프로브는 전용 JSON, 메트릭은 텍스트, OpenAPI는 YAML 형식�
 
 ## 6. 완료 조건 (Definition of Done)
 1. `make run` → `curl :8080/livez`=200, `readyz`=200(DB ping), `/metrics` 응답.
-2. README curl 예제(Task CRUD 전체) 그대로 복붙 시 모두 성공(201/200/404/422/204 시나리오 포함).
+2. README curl 예제(Task CRUD 전체)는 생성 응답의 ID를 사용한다. 인증을 켰으면 Bearer 헤더를 추가하며,
+   201/200/404/422/204 시나리오를 확인한다.
 3. 존재하지 않는 경로/검증 실패/미지 ID가 **통일된 에러 엔벨로프**로 반환.
 4. `go build ./... && go vet ./... && go test ./... -race` 전부 깨끗.
 5. `make lint` 통과(설치 안내 포함).
-6. SIGTERM 전송 시 "shutting down gracefully" 로그 후 정상 종료 확인.
-7. `docker compose up postgres` 후 postgres DSN으로도 동일 동작.
+6. SIGTERM 전송 시 "shut down gracefully", "database connections closed" 로그와 정상 종료를 확인한다.
+7. `docker compose up -d --wait postgres` 후 README의 DSN·`DB_AUTO_MIGRATE=false` 설정과
+   `make migrate-up`을 적용하고 동일 동작을 확인한다.
 8. 신규 모듈 추가 가이드대로 따라했을 때 task 모듈과 동일한 구조가 나옴.
 
 ## 7. 진행 순서

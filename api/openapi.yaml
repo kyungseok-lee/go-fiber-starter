@@ -3,6 +3,8 @@ info:
   title: go-fiber-starter API
   description: Go + Fiber v3 + GORM 기반 REST API 보일러플레이트. /api/v1 업무 API의 JSON 성공·오류 응답은
     공통 Envelope를 사용한다. 204는 빈 본문이며 health 프로브 JSON, Prometheus 텍스트, OpenAPI YAML은 별도 형식이다.
+    기본 AUTH_ENABLED=false에서는 task API가 익명 요청을 허용한다. AUTH_ENABLED=true에서는
+    로그인 경로가 활성화되고 모든 task 요청에 Bearer 토큰이 필수다. 정적 스펙의 security 대안은 두 실행 모드를 나타낸다.
   version: 1.0.0
 servers:
 - url: /
@@ -178,6 +180,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
       security:
+      - {}
       - BearerAuth: []
     get:
       summary: Task 목록(offset 페이지네이션)
@@ -188,7 +191,7 @@ paths:
       - name: page
         in: query
         required: false
-        description: 페이지 번호(1 이상, 기본 1)
+        description: 페이지 번호. 미전달·정수가 아닌 값·1 미만은 기본 1로 정규화한다.
         schema:
           type: integer
           minimum: 1
@@ -196,7 +199,7 @@ paths:
       - name: limit
         in: query
         required: false
-        description: 페이지 크기(1~100, 기본 20, 100 초과분은 클램프)
+        description: 페이지 크기. 미전달·정수가 아닌 값·1 미만은 기본 20, 100 초과분은 100으로 클램프한다.
         schema:
           type: integer
           minimum: 1
@@ -222,6 +225,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
       security:
+      - {}
       - BearerAuth: []
   /api/v1/tasks/{id}:
     get:
@@ -263,10 +267,11 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
       security:
+      - {}
       - BearerAuth: []
     patch:
       summary: Task 부분 수정(present-field만 반영)
-      description: 전달한 필드만 변경한다. due_date에 null을 보내면 해제, 미전달이면 무시.
+      description: 전달한 필드만 변경한다. title·done의 null은 미전달처럼 무시한다. due_date의 null은 해제, 미전달은 유지한다.
       operationId: updateTask
       tags:
       - tasks
@@ -316,6 +321,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
       security:
+      - {}
       - BearerAuth: []
     delete:
       summary: Task 삭제(soft delete)
@@ -352,6 +358,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
       security:
+      - {}
       - BearerAuth: []
 components:
   securitySchemes:
@@ -478,14 +485,16 @@ components:
           nullable: true
     UpdateTaskRequest:
       type: object
-      description: 모든 필드 선택적. 전달한 필드만 반영하며 due_date는 null로 명시 해제한다.
+      description: 모든 필드 선택적. title·done의 null은 무시하고 due_date의 null은 명시 해제한다.
       properties:
         title:
           type: string
+          nullable: true
           minLength: 1
           maxLength: 200
         done:
           type: boolean
+          nullable: true
         due_date:
           type: string
           format: date-time
@@ -543,8 +552,10 @@ components:
       properties:
         username:
           type: string
+          minLength: 1
         password:
           type: string
+          minLength: 1
     LoginResponse:
       type: object
       required:

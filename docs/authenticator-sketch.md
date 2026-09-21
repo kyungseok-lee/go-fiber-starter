@@ -9,7 +9,9 @@
 - 비밀번호는 평문 저장 금지. bcrypt 등 적응형 해시로 저장한다.
 - 타이밍 평준화: 사용자 미존재 시에도 더미 해시 대조를 수행해 "사용자 없음"과
   "비밀번호 틀림"의 응답 시간 차이를 제거한다(사용자 열거 방지).
-- `Authenticator` 인터페이스는 그대로 유지 — 조립(wiring)만 바뀐다.
+- `Authenticator` 인터페이스는 그대로 유지하고 `internal/router/router.go`의 `NewDemoAuthenticator` 조립을 교체한다.
+- `internal/config/config.go`의 prod 데모 기본값 검증도 새 인증 방식에 맞게 수정한다. 현재는 조립만 교체해도
+  `AUTH_DEMO_USERNAME`/`AUTH_DEMO_PASSWORD` 검사가 계속 실행된다.
 
 ```go
 // bcrypt 기반 dbAuthenticator 스케치 (문서-only, 컴파일 보장 없음)

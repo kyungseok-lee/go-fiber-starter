@@ -20,7 +20,8 @@
 make run                # 실행(sqlite 자동 준비). make만 치면 타깃 목록
 make test               # 전체 테스트(-race). 커버리지는 make test-cov
 go test ./internal/modules/task/ -run TestHandler_Create -race -count=1   # 단일 테스트 패턴
-gofmt -w . && go vet ./... && go build ./...   # 커밋 전 최소 검증 세트
+gofmt -w . && make lint && go vet ./...
+go test ./... -race -count=1 && CGO_ENABLED=0 go build ./...  # 커밋 전 필수 검증
 docker compose up -d postgres                 # postgres 기동(mysql은 --profile mysql)
 ```
 
@@ -36,7 +37,8 @@ docker compose up -d postgres                 # postgres 기동(mysql은 --profi
 ## 아키텍처 불변식 (위반 시 리뷰 거부)
 
 - 의존성 방향: `handler → service → repository → model`. 역방향 참조 금지.
-- `fiber.Ctx`는 handler에만, `*gorm.DB`는 repository에만 노출.
+- 도메인 service에는 `fiber.Ctx`와 `*gorm.DB`를 노출하지 않는다. HTTP handler·미들웨어·응답 헬퍼는
+  `fiber.Ctx`를, repository·database 인프라·조립 코드는 `*gorm.DB`를 사용한다.
 - Repository **인터페이스는 service.go(소비자)에 선언**한다. 구현은 repository.go.
 - 모듈 조립 위치: `internal/router/wiring.go`(service 생성) + `router.go`(라우트 마운트).
 - 새 도메인은 `internal/modules/task/`를 템플릿으로 복제한다(model/dto/repo/service/handler/routes).
@@ -53,7 +55,8 @@ docker compose up -d postgres                 # postgres 기동(mysql은 --profi
 
 ## 마이그레이션 이원화 정책 (혼동 금지)
 
-- sqlite(dev 전용): GORM AutoMigrate. prod(pg/mysql)+`DB_AUTO_MIGRATE=true`는 시작 시 하드 차단됨(`database.AutoMigrateIfNeeded`).
+- sqlite(local/dev 전용): GORM AutoMigrate. `APP_ENV=prod`의 pg/mysql에서 `DB_AUTO_MIGRATE=true`는
+  시작 시 하드 차단됨(`database.AutoMigrateIfNeeded`). local/dev의 pg/mysql에서는 경고 후 허용한다.
 - postgres/mysql(prod): `db/migrations/{postgres,mysql}/NNNNNN_name.{up,down}.sql` + `cmd/migrate up|down|version|force`.
 - 새 모델 추가 시 두 곳 모두 처리: (1) `cmd/api/main.go`의 `AutoMigrateIfNeeded(...)` 목록에 추가(sqlite용),
   (2) 드라이버별 SQL 파일 작성(pg/mysql용). 한쪽만 하면 환경에 따라 스키마 누락.
@@ -74,7 +77,8 @@ docker compose up -d postgres                 # postgres 기동(mysql은 --profi
 ## 테스트 관례
 
 - service 단위 테스트: `fakeRepo` 주입(외부 I/O 없음). handler 통합 테스트: 임시 디렉터리 sqlite + 실제 GORM + `app.Test()`.
-- 테스트 헬퍼는 `testutil.Do` 단일 사용(204 등 빈 본문 건너뛰기 내장) — 빈 본문 디코딩으로 인한 EOF 재발 방지.
+- 업무 API handler 통합 테스트는 `testutil.Do` 사용(204 등 빈 본문 건너뛰기 내장).
+  health 프로브와 httpx 자체 테스트는 전용 응답 형식에 맞춘 로컬 헬퍼를 사용한다.
 - sqlite `:memory:`를 쓰지 않는다(풀 연결마다 별도 DB가 되어 플레이크). 임시 파일 경로를 쓸 것.
 
 ## 기타 컨벤션

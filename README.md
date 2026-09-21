@@ -3,7 +3,7 @@
 [![CI](https://github.com/kyungseok-lee/go-fiber-starter/actions/workflows/ci.yml/badge.svg)](https://github.com/kyungseok-lee/go-fiber-starter/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-Go 최신 버전 + **Fiber v3** + **GORM** 기반 REST API 보일러플레이트.
+[go.mod](go.mod)에 고정한 Go·의존성 버전과 **Fiber v3** + **GORM** 기반 REST API 보일러플레이트.
 클론 후 명령어 한 번으로 실행되고, 정해진 패턴을 복사해 모듈을 확장하는 스타터 템플릿이다.
 
 - **즉시 실행**: DB 설치 없이 sqlite로 `make run`
@@ -45,14 +45,23 @@ make tools && make dev
 postgres로 실행:
 
 ```bash
-docker compose up -d postgres
-DB_DRIVER=postgres \
-DB_DSN='postgres://starter:starter@localhost:5432/starter?sslmode=disable' \
-go run ./cmd/api
+docker compose up -d --wait postgres
+export DB_DRIVER=postgres
+export DB_DSN='postgres://starter:starter@localhost:5432/starter?sslmode=disable'
+export DB_AUTO_MIGRATE=false
+make migrate-up
+make run
 ```
 
 > postgres/mysql은 prod 계열 드라이버다. `APP_ENV=prod`에서는 `DB_AUTO_MIGRATE=true`가 하드 차단되며
-> SQL 마이그레이션(`make migrate-up`)을 사용해야 한다.
+> SQL 마이그레이션(`make migrate-up`)을 사용해야 한다. local/dev에서는 AutoMigrate를 경고 후 허용하지만,
+> 위 예제는 운영과 같은 버전 SQL 경로를 사용한다. sqlite로 돌아갈 때는 `unset DB_DRIVER DB_DSN DB_AUTO_MIGRATE`로 해제한다.
+
+MySQL은 `docker compose --profile mysql up -d mysql`로 기동한다. DB가 연결을 받을 준비가 되면
+`DB_DRIVER=mysql`, `DB_DSN='starter:starter@tcp(localhost:3306)/starter?parseTime=true'`,
+`DB_AUTO_MIGRATE=false`를 설정하고 같은 `make migrate-up` → `make run` 순서로 실행한다.
+전체 PostgreSQL 스택은 `make docker-up`으로 실행하며, `migrate` 서비스가 성공한 뒤 `app`이 시작된다.
+`make docker-down`은 컨테이너와 DB 볼륨을 함께 삭제한다.
 
 ## 환경변수
 
@@ -60,21 +69,32 @@ go run ./cmd/api
 
 | 변수 | 기본값 | 설명 |
 |---|---|---|
+| `APP_NAME` | `go-fiber-starter` | Fiber 앱 이름과 시작 로그 |
 | `APP_ENV` | `local` | local/dev/prod. prod+sqlite 조합 금지 |
-| `APP_PORT` | `8080` | |
+| `APP_PORT` | `8080` | 1024~65535 |
 | `LOG_LEVEL` | `info` | 일반 SQL은 debug, 오류·느린 SQL은 error/warn으로 기록(실제 출력은 로그 레벨에 따름) |
 | `DB_DRIVER` | `sqlite` | postgres / mysql / sqlite |
 | `DB_DSN` | `data/app.db` | 드라이버별 DSN 형식은 `.env.example` 주석 |
-| `DB_AUTO_MIGRATE` | `true` | prod(pg/mysql)에서 true면 시작 거부 |
+| `DB_MAX_OPEN_CONNS` | `25` | 최대 열린 DB 연결 수(1 이상) |
+| `DB_MAX_IDLE_CONNS` | `5` | 유휴 연결 수(0~최대 열린 연결 수) |
+| `DB_CONN_MAX_LIFETIME` | `30m` | DB 연결 최대 수명 |
+| `DB_AUTO_MIGRATE` | `true` | APP_ENV=prod의 pg/mysql에서 true면 시작 거부 |
+| `DB_SLOW_QUERY_THRESHOLD` | `500ms` | 느린 SQL 경고 임계값 |
 | `CORS_ALLOWED_ORIGINS` | `*` | 콤마 구분. prod에서 `*`는 시작 거부 |
-| `RATE_LIMIT_PER_MINUTE` | `120` | IP당 분당 요청 수 |
+| `RATE_LIMIT_PER_MINUTE` | `120` | IP당 분당 요청 수. livez/readyz/metrics/openapi.yaml 경로 제외 |
+| `HTTP_READ_TIMEOUT` | `15s` | 요청 읽기 타임아웃(양수) |
+| `HTTP_WRITE_TIMEOUT` | `15s` | 응답 쓰기 타임아웃(양수) |
+| `HTTP_IDLE_TIMEOUT` | `60s` | 유휴 연결 타임아웃(양수) |
+| `SHUTDOWN_GRACE_PERIOD` | `10s` | 정상 종료 대기 시간(양수) |
 | `TRUST_PROXY` | `false` | 역프록시 뒤에서만 true. true면 `TRUST_PROXY_PROXIES` 필수 |
 | `TRUST_PROXY_PROXIES` | — | 신뢰할 프록시 IP/CIDR 목록(콤마 구분). TRUST_PROXY=false인데 설정하면 시작 거부 |
 | `TRUST_PROXY_HEADER` | `X-Forwarded-For` | 클라이언트 IP를 읽을 헤더 |
 | `AUTH_ENABLED` | `false` | true면 로그인 활성화 + `/api/v1/tasks` 전체 Bearer 요구 |
 | `AUTH_RATE_LIMIT_PER_MINUTE` | `10` | 로그인 분당 시도 한도(IP별). 전역 값 이하 |
 | `AUTH_JWT_SECRET` | — | AUTH_ENABLED=true 시 32바이트 이상 필수 |
-| `AUTH_TOKEN_TTL` | `1h` | 액세스 토큰 만료 |
+| `AUTH_TOKEN_TTL` | `1h` | 액세스 토큰 만료. 인증 활성화 시 양수 |
+| `AUTH_DEMO_USERNAME` | `admin` | 데모 사용자명. prod+인증 활성화 시 기본값 금지 |
+| `AUTH_DEMO_PASSWORD` | `admin123` | 데모 비밀번호. prod+인증 활성화 시 기본값 금지 |
 
 ## 인증 (JWT 스캐폴드)
 
@@ -105,15 +125,20 @@ curl -s http://localhost:8080/api/v1/tasks -H "Authorization: Bearer $TOKEN"
 ```
 
 > 이 스캐폴드의 자격증명 검사는 env 기반 demo 구현이다. 실제 사용자 스토어 연동 시
-> `internal/modules/auth/service.go`의 `Authenticator` 인터페이스를 DB 기반(비밀번호 해시 비교)으로 교체하라.
+> `internal/modules/auth/service.go`의 `Authenticator` 인터페이스를 구현하는 DB 기반 검사기(비밀번호 해시 비교)를 만들고,
+> `internal/router/router.go`의 `NewDemoAuthenticator` 조립을 교체한다. 인터페이스 자체는 유지한다.
 > 핸들러에서 현재 신원: `c.Locals(auth.IdentityKey).(auth.Identity)`.
 
 > **⚠️ 데모 자격증명은 local/dev 전용이다.** 기본값(`admin`/`admin123`)은 절대 운영에 사용하지 말 것.
 > `APP_ENV=prod` + `AUTH_ENABLED=true` 상태에서 기본값이 남아 있으면 시작이 거부된다
-> (`AUTH_DEMO_USERNAME`/`AUTH_DEMO_PASSWORD`를 명시적으로 설정하거나 DB 기반 Authenticator로 교체).
+> (두 환경변수를 모두 기본값과 다른 값으로 설정해야 한다). DB 기반 Authenticator로 교체할 때는
+> `internal/config/config.go`의 데모 전용 검증도 함께 수정한다. 조립만 바꾸면 기존 검증은 계속 실행된다.
 > 운영 환경은 DB 기반 Authenticator(비밀번호 해시 비교) 사용을 권장한다.
 
 ## API 예제
+
+아래 curl 예제는 기본값 `AUTH_ENABLED=false`인 서버를 대상으로 한다. 인증을 켠 서버에서는
+각 task 요청에 `-H "Authorization: Bearer $TOKEN"`을 추가한다.
 
 `/api/v1`의 업무 API는 JSON 성공·오류 응답에 공통 엔벨로프를 사용한다. 204 응답은 본문이 없다.
 `/livez`·`/readyz`는 프로브 전용 JSON, `/metrics`는 Prometheus 텍스트, `/openapi.yaml`은 YAML을 반환한다.
@@ -136,14 +161,20 @@ curl -s -X POST $BASE/tasks -H 'Content-Type: application/json' \
 # 목록 (페이지네이션 meta 포함, limit 최대 100)
 curl -s "$BASE/tasks?page=1&limit=20"
 
+# 생성 응답 data.id를 사용한다(예: 1). 기존 DB에서는 값이 다를 수 있다.
+TASK_ID=1
+
 # 단건 (없으면 404 TASK_NOT_FOUND)
-curl -s $BASE/tasks/1
+curl -s "$BASE/tasks/$TASK_ID"
 
 # 부분 수정 (present 필드만 반영)
-curl -s -X PATCH $BASE/tasks/1 -H 'Content-Type: application/json' -d '{"done":true}'
+curl -s -X PATCH "$BASE/tasks/$TASK_ID" -H 'Content-Type: application/json' -d '{"done":true}'
 
 # 삭제 (204, soft delete)
-curl -s -X DELETE $BASE/tasks/1
+curl -s -X DELETE "$BASE/tasks/$TASK_ID"
+
+# 삭제한 ID 조회 → 404 TASK_NOT_FOUND
+curl -s "$BASE/tasks/$TASK_ID"
 
 # 검증 실패 → 422 + 필드별 상세
 curl -s -X POST $BASE/tasks -H 'Content-Type: application/json' -d '{"title":""}'
@@ -164,7 +195,8 @@ curl -s -X POST $BASE/tasks -H 'Content-Type: application/json' -d '{"title":""}
 5. **라우트 마운트**: `internal/router/wiring.go`에 `NewService(NewRepository(db))` 추가,
    `router.go`에서 `RegisterRoutes(v1, svc)` 한 줄 추가
 
-규칙: `fiber.Ctx`는 handler에만, `*gorm.DB`는 repository에만 노출. 의존성 방향 `handler → service → repository`.
+규칙: service에는 `fiber.Ctx`·`*gorm.DB`를 노출하지 않는다. HTTP 미들웨어·헬퍼와 DB 인프라·조립 코드에서의
+프레임워크 타입 사용은 허용한다. 의존성 방향은 `handler → service → repository`.
 
 ## 트랜잭션 패턴
 
@@ -183,6 +215,7 @@ PostgreSQL/MySQL은 조회에 `FOR UPDATE` 행 잠금을 사용하며 sqlite에�
 ```bash
 export DB_DRIVER=postgres
 export DB_DSN='postgres://starter:starter@localhost:5432/starter?sslmode=disable'
+export DB_AUTO_MIGRATE=false  # 이후 API 실행에서도 SQL 관리 스키마를 유지
 
 make migrate-up      # 미적용 전부 적용
 make migrate-down    # 1스텝 롤백
@@ -239,6 +272,10 @@ go test ./internal/modules/task/ -bench BenchmarkTasksList -benchtime 5x   # 벤
 → coverage gate → CGO 없는 빌드를 실행한다. 별도 `migrations` 잡은 PostgreSQL/MySQL 마이그레이션의
 적용·롤백·재적용을, `smoke` 잡은 두 DB에서 앱 부팅과 CRUD 전체 흐름을 검증한다.
 Docker 이미지: 멀티스테이지 빌드, non-root, HEALTHCHECK(/livez).
+
+`v*` 태그 push는 별도 릴리스 워크플로를 실행한다. race 테스트 후 GoReleaser가 API·마이그레이션
+바이너리를 Linux/macOS의 amd64·arm64용으로 빌드해 tar.gz와 체크섬을 배포한다.
+릴리스 API의 `/livez.commit`에는 태그가 들어가며, 일반 로컬 빌드는 `dev`를 사용한다.
 
 ## AI 에이전트 협업 (Codex / Claude / Cursor / opencode 등)
 

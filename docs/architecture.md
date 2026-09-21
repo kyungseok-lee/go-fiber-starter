@@ -14,14 +14,14 @@
 [helmet]         보안 헤더
 [cors]           설정 기반 오리진 허용(prod에서 '*' 거부)
 [limiter 전역]   IP당 분당 예산 — /livez /readyz /metrics /openapi.yaml은 skip
-[prometheus]     method×route패턴×status 카운터/히스토그램(EffectiveStatus 기준)
+[prometheus]     method×route패턴×status 카운터(EffectiveStatus 기준), method×route패턴 지연 히스토그램
 [requestlogger]  실제 상태 기반 구조화 액세스 로그(request_id 포함)
   │
   ▼
 router (/api/v1 그룹)
   ├─ auth: POST /auth/login (로그인 전용 엄격 limiter)
   └─ task: CRUD (AUTH_ENABLED=true면 RequireAuth 가드)
-       │ fiber.Ctx는 여기서 끝난다
+       │ HTTP 계층(handler·미들웨어·헬퍼)에서만 fiber.Ctx 사용
        ▼
    handler   Bind().Body() → StructValidator(validate 태그) → DTO
        │        BindErrorToAppError: 파싱=400 / 검증 위반=422+details
@@ -62,6 +62,9 @@ RequestLogger 액세스 로그에 포함되지 않는다. 로그인 limiter까�
 | repository | *gorm.DB, SQL, 트랜잭션 구현 | HTTP 개념 |
 | model | GORM 태그 | JSON 직렬화 책임(DTO가 담당) |
 
+위 표는 도메인 계층의 경계다. router·cmd/api 조립 코드와 database 인프라는 DB 생성·주입을 위해
+`*gorm.DB`를 사용하고, HTTP 미들웨어·응답 헬퍼는 `fiber.Ctx`를 사용한다.
+
 task 조회·삭제의 미존재는 repository가 `ErrTaskNotFound`로 반환한다. `Update` 내부의
 `gorm.ErrRecordNotFound`는 범용 `apperror.ErrNotFound`로 바꾼 뒤 service가 `ErrTaskNotFound`로 정규화한다.
 기타 DB 오류는 원인을 보존해 상위로 전달하고, ErrorHandler가 알려진 업무 오류와 내부 오류를 HTTP 응답으로 변환한다.
@@ -82,6 +85,9 @@ repository 구현에 두고 `WithContext(ctx)`를 적용한 DB를 전달한다.
 |---|---|---|
 | sqlite(dev/test) | GORM AutoMigrate | 사이클 속도. `cmd/api/main.go` 모델 목록에 등록 |
 | postgres/mysql(prod) | 버전 SQL(`db/migrations/<driver>/`) + `cmd/migrate` | 컬럼 삭제/락 제어. AutoMigrate는 prod에서 하드 차단 |
+
+local/dev의 PostgreSQL/MySQL에서 AutoMigrate를 켜면 경고 후 허용한다. 운영과 같은 스키마 경로를
+검증하려면 `DB_AUTO_MIGRATE=false`와 버전 SQL을 사용한다.
 
 양쪽을 모두 갱신하지 않으면 환경에 따라 스키마가 누락될 수 있다. `readyz`는 DB ping만 수행하므로
 스키마 유무를 보장하지 않는다. 마이그레이션·스키마 테스트와 실제 API·DB 스모크에서 필요한 테이블을 확인한다.
